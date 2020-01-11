@@ -20,7 +20,7 @@ import { isBoundToIterator } from '../shared/ir';
 export const EXPRESSION_SYMBOL_START = '{';
 export const EXPRESSION_SYMBOL_END = '}';
 
-const VALID_EXPRESSION_RE = /^{.+}$/;
+const VALID_EXPRESSION_RE = /^\s*{.+}$/;
 const POTENTIAL_EXPRESSION_RE = /^.?{.+}.*$/;
 
 const ITERATOR_NEXT_KEY = 'next';

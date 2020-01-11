@@ -42,9 +42,9 @@ function isQuotedAttribute(rawAttribute: string) {
     return value && value.startsWith('"') && value.endsWith('"');
 }
 
-function isEscapedAttribute(rawAttribute: string) {
+function hasMatchingBrackets(rawAttribute: string) {
     const [, value] = rawAttribute.split('=');
-    return !value || !(value.includes('{') && value.includes('}'));
+    return value && value.includes('{') && value.includes('}');
 }
 
 const booleanAttributes = new Set<string>([
@@ -122,9 +122,10 @@ export function normalizeAttributeValue(
     }
 
     const isQuoted = isQuotedAttribute(raw);
-    const isEscaped = isEscapedAttribute(raw);
-    if (!isEscaped && isExpression(value)) {
-        if (isQuoted) {
+    const matchedBrackets = hasMatchingBrackets(raw);
+    if (matchedBrackets && isExpression(value)) {
+        const trimmed = raw.trim();
+        if (isQuoted && trimmed.startsWith('{') && trimmed.endsWith('}')) {
             // <input value="{myValue}" />
             // -> ambiguity if the attribute value is a template identifier or a string literal.
 
@@ -139,7 +140,7 @@ export function normalizeAttributeValue(
         // <input value={myValue} />
         // -> Valid identifier.
         return { value, escapedExpression: false };
-    } else if (!isEscaped && isPotentialExpression(value)) {
+    } else if (matchedBrackets && isPotentialExpression(value)) {
         const isExpressionEscaped = value.startsWith(`\\${EXPRESSION_SYMBOL_START}`);
         const isExpressionNextToSelfClosing =
             value.startsWith(EXPRESSION_SYMBOL_START) &&

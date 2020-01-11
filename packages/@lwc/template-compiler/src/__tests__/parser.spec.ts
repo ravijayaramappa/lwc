@@ -429,7 +429,7 @@ describe('root errors', () => {
     });
 });
 
-describe('expression', () => {
+describe.only('expression', () => {
     it('forbid reference to this', () => {
         const { warnings } = parseTemplate(`<template><input title={this.title} /></template>`);
         expect(warnings[0]).toMatchObject({
@@ -463,6 +463,31 @@ describe('expression', () => {
         expect(warnings[0]).toMatchObject({
             location: EXPECTED_LOCATION,
         });
+    });
+
+    it('quoted expression with leading spaces should produce error', () => {
+        const { warnings } = parseTemplate(`<template><input title="  {myValue}" /></template>`);
+        expect(warnings[0].message).toMatch(`Ambiguous attribute value title="  {myValue}"`);
+        expect(warnings[0]).toMatchObject({
+            location: EXPECTED_LOCATION,
+        });
+    });
+    // if the curly brace is at 0th or 1st position of the string, then it is currenlty an error (given closing brace exists)
+    // "{username}-lightningUpload-{recId}-"
+    // "[{asdf}]"
+    it('quoted expression with leading characters should not produce error', () => {
+        const { root } = parseTemplate(`<template><input title="h{myValue}"/></template>`);
+        expect(root.children[0].attrs.title).toMatchObject({ value: TEMPLATE_IDENTIFIER });
+    });
+
+    it('quoted expression warpped in square brackets should not produce error', () => {
+        const { root } = parseTemplate(`<template><input title="[{myValue}]"/></template>`);
+        expect(root.children[0].attrs.title).toMatchObject({ value: TEMPLATE_IDENTIFIER });
+    });
+
+    it('quoted expression with trailing characters should not produce error', () => {
+        const { root } = parseTemplate(`<template><input title="{myValue}contenct"/></template>`);
+        expect(root.children[0].attrs.title).toMatchObject({ value: TEMPLATE_IDENTIFIER });
     });
 
     it('autofix unquoted value next to unary tag', () => {
