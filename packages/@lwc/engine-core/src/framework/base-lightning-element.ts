@@ -555,5 +555,8 @@ if (process.env.NODE_ENV !== 'production') {
     patchLightningElementPrototypeWithRestrictions(BaseLightningElementConstructor.prototype);
 }
 
+// Temporarily enable native shadow for all components
+BaseLightningElementConstructor.forceNativeShadow = true;
+
 // @ts-ignore
 export const BaseLightningElement: LightningElementConstructor = BaseLightningElementConstructor as unknown;
