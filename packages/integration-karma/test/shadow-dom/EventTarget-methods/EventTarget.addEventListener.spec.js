@@ -161,51 +161,74 @@ describe('EventTarget.addEventListener', () => {
     });
     // TODO [#2253]: Enable in all modes once bug is fixed
     if (process.env.NATIVE_SHADOW) {
-        describe('should discard multiple identical listeners on same target', () => {
-            it('listeners on shadow root, non-composed event', () => {
-                const logs = [];
-                const listener = function (event) {
-                    logs.push([this, event.currentTarget]);
-                };
-                const listenerTargets = [
-                    nodes.button,
-                    nodes['container_div'],
-                    nodes['x-container'].shadowRoot,
-                ];
-                listenerTargets.forEach((target) => {
-                    target.addEventListener('dedupe', listener);
-                    target.addEventListener('dedupe', listener); // duplicate listener
+        describe('duplicate listeners', () => {
+            describe('should discard multiple identical listeners on same target', () => {
+                function testDiscardingMultipleListeners(
+                    target,
+                    listenerTargets,
+                    expected,
+                    composed = false
+                ) {
+                    const logs = [];
+                    const listener = function (event) {
+                        logs.push([this, event.currentTarget]);
+                    };
+                    listenerTargets.forEach((target) => {
+                        target.addEventListener('dedupe', listener);
+                        target.addEventListener('dedupe', listener); // duplicate listener
+                    });
+                    target.dispatchEvent(new CustomEvent('dedupe', { bubbles: true, composed }));
+                    expect(logs).toEqual(expected);
+                }
+                it('listeners on shadow root, non-composed event', () => {
+                    testDiscardingMultipleListeners(
+                        nodes.button,
+                        [nodes.button, nodes['container_div'], nodes['x-container'].shadowRoot],
+                        [
+                            [nodes.button, nodes.button],
+                            [nodes['container_div'], nodes['container_div']],
+                            [nodes['x-container'].shadowRoot, nodes['x-container'].shadowRoot],
+                        ]
+                    );
                 });
-                nodes.button.dispatchEvent(new CustomEvent('dedupe', { bubbles: true }));
-                expect(logs).toEqual([
-                    [nodes.button, nodes.button],
-                    [nodes['container_div'], nodes['container_div']],
-                    [nodes['x-container'].shadowRoot, nodes['x-container'].shadowRoot],
-                ]);
-            });
 
-            it('listeners on host, composed event', () => {
-                const logs = [];
-                const listener = function (event) {
-                    logs.push([this, event.currentTarget]);
-                };
-                const listenerTargets = [
-                    nodes.button,
-                    nodes['container_div'],
-                    nodes['x-container'],
-                ];
-                listenerTargets.forEach((target) => {
-                    target.addEventListener('dedupe', listener);
-                    target.addEventListener('dedupe', listener); // duplicate listener
+                it('listeners on host, composed event', () => {
+                    testDiscardingMultipleListeners(
+                        nodes.button,
+                        [nodes.button, nodes['container_div'], nodes['x-container']],
+                        [
+                            [nodes.button, nodes.button],
+                            [nodes['container_div'], nodes['container_div']],
+                            [nodes['x-container'], nodes['x-container']],
+                        ],
+                        true
+                    );
                 });
-                nodes.button.dispatchEvent(
-                    new CustomEvent('dedupe', { bubbles: true, composed: true })
-                );
-                expect(logs).toEqual([
-                    [nodes.button, nodes.button],
-                    [nodes['container_div'], nodes['container_div']],
-                    [nodes['x-container'], nodes['x-container']],
-                ]);
+            });
+            describe('should invoke identical listeners on same target with different options', () => {
+                // Note: addEventListener() with options are restricted for shadow root and host elements
+                function testMultipleListeners(target, listenerTargets, expected) {
+                    const logs = [];
+                    const listener = function (event) {
+                        logs.push([this, event.currentTarget]);
+                    };
+                    listenerTargets.forEach((target) => {
+                        target.addEventListener('multiple', listener);
+                        target.addEventListener('multiple', listener, { passive: true }); // duplicate listener
+                    });
+                    target.dispatchEvent(new CustomEvent('multiple', { bubbles: true }));
+                    expect(logs).toEqual(expected);
+                }
+                it('listeners on standard html elements', () => {
+                    testMultipleListeners(
+                        nodes.button,
+                        [nodes.button, nodes['container_div']],
+                        [
+                            [nodes.button, nodes.button],
+                            [nodes['container_div'], nodes['container_div']],
+                        ]
+                    );
+                });
             });
         });
     }
